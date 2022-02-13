@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <base target="_top">
+    <?!= Include.html(['cdn.css']); ?>
+    <?!= Include.css(['app']); ?>
+  </head>
+  <body>
+    <?!= Include.html(['cdn', 'appmarkup']); ?>
+    <?!= Include.gs(['KeyStore']); ?>
+    <?!= Include.js(['components','store','provoke']); ?>
+    <?!= Include.vue([
+      'bmMain',
+      'bmThrow',
+      'bmPrivateKeys',
+      'bmOverlay'
+    ]); ?>
+    <?!= Include.js(['main']); ?>
+  </body>
+</html>
+
+
