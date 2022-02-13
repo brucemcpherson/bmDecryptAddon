@@ -1,0 +1,25 @@
+// namespace for promisifying server side calls
+const Provoke = (() => {
+  const loiter = (ms, tag) =>
+    new Promise(function (resolve, reject) {
+      try {
+        setTimeout(() => resolve(tag), ms);
+      } catch (err) {
+        reject(err);
+      }
+    });
+
+  const run = (namespace, method, ...runArgs) => {
+    return new Promise(function (resolve, reject) {
+      google.script.run
+        .withFailureHandler(reject)
+        .withSuccessHandler(resolve)
+        .exposeRun(namespace, method, ...runArgs);
+    });
+  };
+
+  return {
+    run,
+    loiter
+  };
+})();
