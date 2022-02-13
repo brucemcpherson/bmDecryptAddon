@@ -1,0 +1,21 @@
+Store.addComponent({
+  name: "bm-overlay",
+  template: `
+    <v-overlay
+      :absolute="true"
+      :opacity="0.5"
+      :value="overlay"
+    >
+      <div class="text-center">
+    <v-progress-circular
+      :size="50"
+      color="primary"
+      indeterminate
+    ></v-progress-circular>
+    </div>
+  </v-overlay>
+  `,
+  computed: {
+    ...Store.mapState
+  }
+});
