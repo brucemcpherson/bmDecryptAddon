@@ -1,0 +1,141 @@
+<script>
+  Store.addComponent({
+    name: "bm-private-keys",
+    template: `
+      <v-card>
+        <div class="ml-2 mt-2 text-subtitle-1">Decrypt columns</div>
+
+        <div class ="ml-2 mt-2" v-for="ss in encs" :key="ss.id">
+          <div>         
+            <v-icon small color="green">mdi-google-spreadsheet</v-icon><span  class="text-caption">{{ss.spreadsheetName}}</span>
+          </div>
+          <v-divider></v-divider>
+          <div class="ml-4">
+            <div v-for="sheet in ss.sheets" :key="sheet.sheetName">
+              <div><v-icon small color="green">mdi-table</v-icon><span class="text-caption mr-2">{{sheet.sheetName}}</span></div>
+              <v-divider></v-divider>
+              <v-text-field v-for="column in sheet.columns" 
+                :append-icon="column.showKey ? 'mdi-eye-off' : 'mdi-eye'"
+                :key="column.columnName" 
+                clearable 
+                :type="column.showKey ? 'text' : 'password'"
+                :value="column.privateKey" 
+                :label="column.columnName + ' private key'" 
+                @input="(e)=>updateField({column,fieldName:'privateKey',value: e})"
+                @click:append="()=>updateField({column,fieldName:'showKey',value: !column.showKey})">
+              </v-text-field>
+            </div>
+          </div>
+        </div>
+
+        <div class="ml-2 mt-2">
+          <div>           
+            <v-checkbox
+              v-model="checkRemoveEncrypted"
+              label="Remove encrypted columns"
+              :disabled="!showChecks"
+            ></v-checkbox>  
+          </div>
+        </div>
+        <v-card-actions>
+          <v-btn 
+            icon
+            :disabled= "decrypting"
+            @click="getEncryptedFields" 
+            color="secondary">
+              <v-icon>mdi-refresh</v-icon>
+          </v-btn>
+          <v-spacer></v-spacer>
+          <v-btn 
+            :disabled= "disableDecryption"
+            @click="testOnly" 
+            color="secondary">
+              Test
+          </v-btn>
+          <v-btn 
+            :disabled= "disableDecryption"
+            @click="doDecrypts" 
+            color="primary">
+              Decrypt
+          </v-btn>
+         
+        </v-card-actions>
+      </v-card>
+    `,
+    methods: {
+      async testOnly() {
+        return await this.doDecrypts ({testOnly:true})
+      },
+      // run the decryption server side
+      async doDecrypts({testOnly = false} = {}) {
+        const result = await this.runDecryption ({testOnly})
+        if (result.success) {
+          // nothing to do
+          if (result.encryptedSelection.length) {
+            this.setToaster ({
+              message:`${result.encryptedSelection.length} columns ${testOnly ? 'tested ok' :'decrypted'}`
+            })
+          } else {
+            this.setToaster ({
+              message: 'no columns to decrypt',
+              color: this.COLORS.error
+            })
+          }
+        } else {
+            this.setToaster ({
+              message: `Decryption failed:${result.error}`,
+              color: this.COLORS.error
+            })
+        }
+      },
+      ...Store.mapActions,
+      ...Store.mapMutations
+    },
+    computed: {
+      // whether to disable the decrypt action
+      disableDecryption() {
+        return !this.decrypting && this.decryptActions.length ? false : true;
+      },
+      showChecks () {
+        return this.encryptedFields && this.encryptedFields.length
+      },
+      checkRemoveEncrypted: {
+        get () {
+          return this.removeEncrypted
+        },
+        set (value) {
+          this.setRemoveEncrypted(value)
+        }
+      },
+      // map out to organize by ss/sheet/column
+      encs() {
+        return this.encryptedFields.reduce((p, c) => {
+          // usually there'd only be one sheet id - but lets do this for future enhancements
+          const { id, sheetName, columnName, spreadsheetName } = c;
+          if (!p.find((f) => f.id === id))
+            p.push({
+              id,
+              spreadsheetName,
+              sheets: []
+            });
+          const { sheets } = p.find((f) => f.id === id);
+
+          // add the sheet to the collection
+          if (!sheets.find((f) => f.sheetName === sheetName))
+            sheets.push({
+              sheetName,
+              columns: []
+            });
+          const { columns } = sheets.find((f) => f.sheetName === sheetName);
+
+          // add the columnNames
+          columns.push(c);
+          return p;
+        }, []);
+      },
+      ...Store.mapState,
+      ...Store.mapGetters
+    }
+  });
+</script>
+
