@@ -1,0 +1,23 @@
+window.onload = () => {
+  const waitForModules = Store.moduleImports || Promise.resolve(null);
+
+  waitForModules.then((modules) => {
+    Store.init({ modules }).components.registerAll();
+
+    new Vue({
+      el: "#app",
+      vuetify: new Vuetify(),
+      store: Store.vxStore
+    });
+
+    Store.load();
+
+    window.addEventListener("beforeunload", (event) => {
+      Store.unload();
+
+      event.preventDefault();
+
+      event.returnValue = "";
+    });
+  });
+};
