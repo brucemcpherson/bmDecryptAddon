@@ -1,0 +1,210 @@
+const Store = ((ns) => {
+  const COLORS = {
+    snackbar: 'green',
+    error: 'red',
+    pending: 'blue'
+  }
+  const _initial = {
+    state: {
+      encryptedFields: [],
+      message: "",
+      showMessage: false,
+      decrypting: false,
+      COLORS,
+      messageColor: COLORS.snackbar,
+      removeEncrypted: true, 
+      returnData: false,
+      overlay: false,
+      rememberKeys: true
+    },
+    getters: {
+      decryptActions (state) {
+        return state.encryptedFields.filter((f) => f.privateKey);
+      }
+    },
+    actions: {
+
+      // these will come server side
+      async getEncryptedFields({ state, commit }) {
+        commit("setOverlay" , true)
+        commit ("setToaster", {
+          message: "Checking to see which columns are encrypted",
+          color: state.COLORS.pending
+        })
+        
+        return await Provoke.run ("Server", "getActiveSpec")
+          .then (value=>{
+            commit("setShowMessage", false)
+            if (!value.length) {
+              commit ("setToaster", {
+                message: "There are no encrypted fields",
+                color: state.COLORS.error
+              })
+            }
+            commit("setEncryptedFields", value)
+          })
+          .catch(err=>{
+            console.log(err)
+            commit ("setToaster", {
+              message: err.toString(),
+              color: state.COLORS.error
+            })
+          })
+          .finally(() => {
+            commit("setOverlay" , false)
+          })
+      },
+
+      // get server side to run the decryptions
+      async runDecryption({ state, commit, getters }, {testOnly}) {
+        // only do the fields for which we have a private key
+        // now provoke an action to start
+       
+        const encryptedSelection = getters.decryptActions
+        if (!encryptedSelection.length) {
+          commit("setToaster", {
+            message: "Nothing to do",
+            color: state.COLORS.error
+          });
+          return Promise.resolve(null)
+        }
+
+        // prepare for encryption
+        commit('setDecrypting', true)
+        commit("setOverlay" , true)
+        commit(
+          "setToaster",{
+            message: `${testOnly ? 'Testing' : 'Decrypting'} ${encryptedSelection.length} columns`,
+            color: state.COLORS.pending
+          }
+        );
+        
+
+        // do the decryption
+        return await Provoke.run ("Server", "decrypt", {
+            encryptedSelection,
+            testOnly,
+            removeEncrypted: state.removeEncrypted,
+            returnData: state.returnData,
+            rememberKeys: state.rememberKeys
+          })
+          .then (value=>{
+            commit("setShowMessage", false)
+            // the currently encrypted fields shoud be returned too
+            commit("setEncryptedFields", value.activeSpec)
+            console.log('received', value)
+            return {
+              success: true,
+              ...value 
+            }
+          })
+          .catch(err=>{
+            console.log(err)
+            return {
+              success: false,
+              encryptedSelection: [],
+              error: err.toString(),
+              err
+            }
+          })
+          .finally (() => {
+            commit('setDecrypting', false)
+            commit("setOverlay" , false)
+          })
+
+      }
+    },
+
+    mutations: {
+
+      updateField (state, {column, fieldName, value}) {
+        // make a copy of current values
+        const fields = state.encryptedFields.map(f=>({...f}));
+        
+        // find the target field
+        const field = fields.find(
+          (f) =>
+            f.id === column.id &&
+            f.sheetName === column.sheetName &&
+            f.columnName === column.columnName
+        );
+        // set the new value
+        field[fieldName] = value;
+        // mutate
+        state.encryptedFields = fields;
+        console.log(fields)
+      },
+
+      // these are the fields detected as encrypted
+      setEncryptedFields(state, value) {
+        console.log('setEncryptedFields', value)
+        state.encryptedFields = value;
+      },
+      // message to be shown on snackbar
+      setMessage(state, value) {
+        state.messageColor = state.COLORS.snackbar;
+        state.message = value;
+      },
+      // whether to show the message on the snackbar
+      setShowMessage(state, value) {
+        state.showMessage = value;
+      },
+      // whether decrypting is happening
+      setDecrypting (state, value) {
+        state.decrypting = value
+      },
+      setToaster ( state , {message , show = true , color}) {
+        state.message = message;
+        state.messageColor = color || state.COLORS.snackbar;
+        state.showMessage = show;
+
+      },
+      setRemoveEncrypted (state, value) {
+        state.removeEncrypted = value
+      },
+      setReturnData (state, value) {
+        state.returnData = value
+      },
+      setOverlay (state, value) {
+        state.overlay = value
+      },
+      setRememberKeys (state, value) {
+        state.rememberKeys = value
+      }
+    }
+  };
+
+  // useful maps for each vue component
+  const _vxMaps = Object.keys(_initial).reduce((p, c) => {
+    p[c] = Object.keys(_initial[c]);
+    return p;
+  }, {});
+  ns.mapGetters = Vuex.mapGetters(_vxMaps.getters);
+  ns.mapState = Vuex.mapState(_vxMaps.state);
+  ns.mapMutations = Vuex.mapMutations(_vxMaps.mutations);
+  ns.mapActions = Vuex.mapActions(_vxMaps.actions);
+  
+  // create the store for the vue components
+  ns.components = Components.init(Vue);
+  
+  // just a short cut to keep everything accessible via this namespace
+  ns.addComponent = Components.addComponent;
+
+  // kick it off
+  // any modules will be passed over too
+  ns.init = ({ modules } = {}) => {
+    Vue.use(Vuex);
+    ns.vxStore = new Vuex.Store(_initial);
+    return ns;
+  };
+  
+  // kick off the run
+  ns.load = () => {
+    ns.vxStore.dispatch("getEncryptedFields");
+  };
+  
+  // clean up afterwards
+  ns.unload = () => {};
+
+  return ns;
+})({});
