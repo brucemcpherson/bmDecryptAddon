@@ -1,0 +1,38 @@
+const Components = (() => {
+  const ns = {};
+
+  ns.init = (vue) => {
+    ns.vue = vue;
+    ns.components = new KeyStore();
+    return ns;
+  };
+
+  ns.getComponent = (name) => {
+    return ns.components.getStore(name);
+  };
+
+  ns.register = (component) => {
+    ns.vue.component(component.name, component);
+    return component;
+  };
+
+  ns.registerAll = () =>
+    ns.components.keys.map((key) => ns.register(ns.getComponent(key)));
+
+  ns.addComponent = (component, name) => {
+    name = name || component.name;
+    if (!name) {
+      throw new Error(`no component name given`);
+    }
+    if (ns.components.hasStore(name)) {
+      throw new Error(`component ${name} already exists`);
+    }
+
+    if (!component.name) component.name = name;
+
+    ns.components.setStore(name, component);
+    return ns;
+  };
+
+  return ns;
+})();
