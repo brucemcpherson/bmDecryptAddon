@@ -2,65 +2,101 @@
   Store.addComponent({
     name: "bm-private-keys",
     template: `
-      <v-card>
-        <div class="ml-2 mt-2 text-subtitle-1">Decrypt columns</div>
-
-        <div class ="ml-2 mt-2" v-for="ss in encs" :key="ss.id">
-          <div>         
-            <v-icon small color="green">mdi-google-spreadsheet</v-icon><span  class="text-caption">{{ss.spreadsheetName}}</span>
-          </div>
-          <v-divider></v-divider>
-          <div class="ml-4">
-            <div v-for="sheet in ss.sheets" :key="sheet.sheetName">
-              <div><v-icon small color="green">mdi-table</v-icon><span class="text-caption mr-2">{{sheet.sheetName}}</span></div>
-              <v-divider></v-divider>
-              <v-text-field v-for="column in sheet.columns" 
-                :append-icon="column.showKey ? 'mdi-eye-off' : 'mdi-eye'"
-                :key="column.columnName" 
-                clearable 
-                :type="column.showKey ? 'text' : 'password'"
-                :value="column.privateKey" 
-                :label="column.columnName + ' private key'" 
-                @input="(e)=>updateField({column,fieldName:'privateKey',value: e})"
-                @click:append="()=>updateField({column,fieldName:'showKey',value: !column.showKey})">
-              </v-text-field>
+      <v-card flat>
+        <v-card 
+          flat 
+          class="mt-2" 
+          v-for="ss in encs" 
+          :key="ss.id"
+        >
+          <v-card-text>
+            <v-icon small color="green">mdi-google-spreadsheet</v-icon><span class="text-caption">{{ss.spreadsheetName}}</span>
+          </v-card-text>
+          <v-card-text v-for="sheet in ss.sheets" :key="sheet.sheetName">
+            <div>
+              <v-icon small color="green">mdi-table</v-icon><span class="text-caption mr-2">{{sheet.sheetName}}</span>
             </div>
-          </div>
-        </div>
+            <v-text-field 
+              v-for="column in sheet.columns" 
+              :append-icon="column.showKey ? 'mdi-eye-off' : 'mdi-eye'" 
+              :key="column.columnName" 
+              clearable 
+              :type="column.showKey ? 'text' : 'password'" 
+              :value="column.privateKey" 
+              :label="column.columnName + ' private key'" 
+              @input="(e)=>updateField({column,fieldName:'privateKey',value: e})" 
+              @click:append="()=>updateField({column,fieldName:'showKey',value: !column.showKey})"
+            >
+            </v-text-field>
+          </v-card-text>
+        </v-card>
 
-        <div class="ml-2 mt-2">
-          <div>           
-            <v-checkbox
-              v-model="checkRemoveEncrypted"
-              label="Remove encrypted columns"
-              :disabled="!showChecks"
-            ></v-checkbox>  
-          </div>
-        </div>
-        <v-card-actions>
-          <v-btn 
-            icon
-            :disabled= "decrypting"
-            @click="getEncryptedFields" 
-            color="secondary">
-              <v-icon>mdi-refresh</v-icon>
-          </v-btn>
-          <v-spacer></v-spacer>
-          <v-btn 
-            :disabled= "disableDecryption"
-            @click="testOnly" 
-            color="secondary">
-              Test
-          </v-btn>
-          <v-btn 
-            :disabled= "disableDecryption"
-            @click="doDecrypts" 
-            color="primary">
-              Decrypt
-          </v-btn>
-         
-        </v-card-actions>
+        <v-card flat>
+          <v-container>
+            <v-row dense>
+              <v-col cols="10">
+                <v-tooltip top>
+                  <template v-slot:activator="{ on, attrs }">
+                    <div v-bind="attrs"v-on="on">
+                      <v-checkbox 
+                      v-model="checkRemoveEncrypted" 
+                      label="Remove encrypted columns" 
+                      :disabled="!showChecks"
+                      > 
+                      </v-checkbox>
+                    </div>
+                  </template>
+                  <span>Remove encrypted columns after decryption</span>
+                </v-tooltip>
+              </v-col>
+              <v-col cols="2" class="mt-3">
+                <v-tooltip top>
+                  <template v-slot:activator="{ on, attrs }">
+                    <div v-bind="attrs"v-on="on">
+                      <v-btn icon :disabled="decrypting" @click="getEncryptedFields" color="secondary">
+                        <v-icon>mdi-refresh</v-icon>
+                      </v-btn>
+                    </div>
+                  </template>
+                  <span>Refresh encrypted column list</span>
+                </v-tooltip>
+
+              </v-col>
+            </v-row>
+            <v-row dense>
+
+              <v-col cols="7">
+                <v-tooltip top>
+                  <template v-slot:activator="{ on, attrs }">
+                    <div v-bind="attrs"v-on="on">
+                      <v-btn :disabled="disableDecryption" @click="testOnly" color="secondary">
+                        Test
+                      </v-btn>
+                    </div>
+                  </template>
+                  <span>Just test that private key(s) will work</span>  
+                </v-tooltip>  
+              </v-col>
+
+              <v-col cols="5" >
+                <v-tooltip top>
+                  <template v-slot:activator="{ on, attrs }">
+                    <div v-bind="attrs"v-on="on">
+                      <v-btn :disabled="disableDecryption" @click="doDecrypts" color="primary">
+                        Decrypt
+                      </v-btn>
+                    </div>
+                  </template>
+                  <span>Decrypt column(s)</span>  
+                  </v-tooltip>   
+              </v-col>
+            </v-row>
+
+          </v-container>
+        </v-card>
       </v-card>
+
+
     `,
     methods: {
       async testOnly() {
@@ -97,7 +133,7 @@
         return !this.decrypting && this.decryptActions.length ? false : true;
       },
       showChecks () {
-        return this.encryptedFields && this.encryptedFields.length
+        return this.encryptedFields && this.encryptedFields.length && !this.disableDecryption
       },
       checkRemoveEncrypted: {
         get () {
