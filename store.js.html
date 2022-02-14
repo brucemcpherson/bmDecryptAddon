@@ -92,7 +92,6 @@ const Store = ((ns) => {
             commit("setShowMessage", false)
             // the currently encrypted fields shoud be returned too
             commit("setEncryptedFields", value.activeSpec)
-            console.log('received', value)
             return {
               success: true,
               ...value 
@@ -132,12 +131,10 @@ const Store = ((ns) => {
         field[fieldName] = value;
         // mutate
         state.encryptedFields = fields;
-        console.log(fields)
       },
 
       // these are the fields detected as encrypted
       setEncryptedFields(state, value) {
-        console.log('setEncryptedFields', value)
         state.encryptedFields = value;
       },
       // message to be shown on snackbar
