@@ -28,9 +28,13 @@ function showTemplate() {
 
   const code = HtmlService.createTemplateFromFile('index.html')
     .evaluate()
-  console.log(code.getContent())
+
+  // if you want to debug, then uncomment this
+  // and copy the code into codepen to play around with it
+  // console.log(code.getContent())
+
   var ui = code
-    .setTitle('bm Decrypter Add-on template');
+    .setTitle('bm Decrypter: Decrypt columns');
 
   SpreadsheetApp.getUi().showSidebar(ui);
 }
