@@ -36,8 +36,6 @@ function myFunction() {
     returnData: false
   })
 
-
-
 }
 
 function t() {
